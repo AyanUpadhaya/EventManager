@@ -8,7 +8,7 @@ const find = async () => {
     return result[0];
   } catch (error) {
     console.log("Error occured while finding all the records");
-    console.log(error);
+    throw error;
   }
 };
 
@@ -23,6 +23,7 @@ const create = async (name, email, password) => {
     return result;
   } catch (error) {
     console.log("Error occured while creating user");
+    throw error
   }
 };
 

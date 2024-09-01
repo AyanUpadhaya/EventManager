@@ -1,7 +1,6 @@
 const {
   getConflictingEvents,
   create,
-  find,
   findById,
   findByPagination,
   deleteRecord,
@@ -64,7 +63,7 @@ const getSingleEvent = async (req, res) => {
   try {
     const [event] = await findById(id);
     if (!event) {
-      res.status(404).json({ message: "Error occured: No event found" });
+      return res.status(404).json({ message: "Error occured: No event found" });
     }
     return res.status(200).json(event);
   } catch (error) {
@@ -76,6 +75,10 @@ const getSingleEvent = async (req, res) => {
 
 const deleteEvent = async (req, res) => {
   const id = req.params.id;
+  const [event] = await findById(id);
+  if (!event) {
+    return res.status(404).json({ message: "Error occured: No event found" });
+  }
   try {
     const result = await deleteRecord(id);
     return res.status(200).json({ message: "Event deleted", result });
@@ -88,36 +91,46 @@ const deleteEvent = async (req, res) => {
 
 const updateEvent = async (req, res) => {
   const id = req.params.id;
-  
-    const { name, date, start_time, end_time, location, description } = req.body;
-    const event = {
-      name,
-      date,
-      start_time,
-      end_time,
-      location,
-      description,
-    };
 
-    // Check for time conflicts
-    const [conflictingEvents] = await getConflictingEventsOnUpdate(event,id);
+  const [item] = await findById(id);
+  if (!item) {
+    return res.status(404).json({ message: "Error occured: No event found" });
+  }
 
-    if (conflictingEvents.length > 0) {
-      return res
-        .status(400)
-        .json({ message: "Time conflict with another event." });
-    }
+  const { name, date, start_time, end_time, location, description } = req.body;
 
-    try {
-      const result = await updateById(event, id);
-      return res.status(201).json({ message: "Event updated", result: result });
-    } catch (error) {
-      console.log(error.message || "Error occured: Failed to create event");
-      return res.status(500).json({
-        message: "Error occured",
-        error: error.message || "Failed to create event",
-      });
-    }
+  if (!name || !date || !start_time || !end_time || !location || !description) {
+    return res.status(400).json({ message: "missing field required" });
+  }
+
+  const event = {
+    name,
+    date,
+    start_time,
+    end_time,
+    location,
+    description,
+  };
+
+  // Check for time conflicts
+  const [conflictingEvents] = await getConflictingEventsOnUpdate(event, id);
+
+  if (conflictingEvents.length > 0) {
+    return res
+      .status(400)
+      .json({ message: "Time conflict with another event." });
+  }
+
+  try {
+    const result = await updateById(event, id);
+    return res.status(200).json({ message: "Event updated", result: result });
+  } catch (error) {
+    console.log(error.message || "Error occured: Failed to create event");
+    return res.status(500).json({
+      message: "Error occured",
+      error: error.message || "Failed to create event",
+    });
+  }
 };
 
 module.exports = {
