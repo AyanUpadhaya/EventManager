@@ -1,7 +1,7 @@
 const { pool } = require("./db");
 
 const find = async () => {
-  const QUERY = "SELECT * FROM users";
+  const QUERY = "SELECT id,name,email FROM users";
   try {
     const client = await pool.getConnection();
     const result = await client.query(QUERY);
@@ -23,7 +23,6 @@ const create = async (name, email, password) => {
     return result;
   } catch (error) {
     console.log("Error occured while creating user");
-    console.log(error);
   }
 };
 
@@ -33,15 +32,17 @@ const findByEmail = async (email) => {
 
   try {
     client = await pool.getConnection();
-    const [rows] = await client.query(QUERY, [email]); // Using destructuring to get rows directly
-    return rows[0]; // Return the first user found, if any
+    const [rows] = await client.query(QUERY, [email]); 
+    return rows[0]; 
   } catch (error) {
     console.error("Error occurred while getting user by email:", error);
     throw error;
   } finally {
-    if (client) client.release(); // Make sure to release the connection
+    if (client) client.release(); 
   }
 };
+
+
 module.exports = {
   find,
   create,
