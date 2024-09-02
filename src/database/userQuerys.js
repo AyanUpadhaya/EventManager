@@ -1,5 +1,10 @@
 const { pool } = require("./db");
 
+/**
+ * By using parameterized queries, the mysql package will automatically escape 
+ * and sanitize the input values, preventing SQL injection attacks.
+*/
+
 const find = async () => {
   const QUERY = "SELECT id,name,email FROM users";
   try {
@@ -42,7 +47,6 @@ const findByEmail = async (email) => {
     if (client) client.release(); 
   }
 };
-
 
 module.exports = {
   find,

@@ -3,9 +3,14 @@ const {
   create,
   findById,
   findByPagination,
-  deleteRecord,
+  deleteRecordById,
   updateById,
   getConflictingEventsOnUpdate,
+  getEventParticipants,
+  findParticipantById,
+  checkParticipantExist,
+  addParticipantInEvent,
+  removeParticipantFromEvent,
 } = require("../database/eventQuerys");
 
 const createEvent = async (req, res) => {
@@ -48,6 +53,13 @@ const getEvents = async (req, res) => {
 
   try {
     const events = await findByPagination(pageSize, offset);
+    const eventsWithParticipants = await Promise.all(
+      events.map(async (event) => {
+        const participants = await getEventParticipants(event.id);
+        return { ...event, participants };
+      })
+    );
+    return res.status(200).json(eventsWithParticipants);
     return res.status(200).json(events);
   } catch (error) {
     console.log("Error occurred while fetching events");
@@ -80,7 +92,7 @@ const deleteEvent = async (req, res) => {
     return res.status(404).json({ message: "Error occured: No event found" });
   }
   try {
-    const result = await deleteRecord(id);
+    const result = await deleteRecordById(id);
     return res.status(200).json({ message: "Event deleted", result });
   } catch (error) {
     return res.status(500).json({
@@ -133,10 +145,96 @@ const updateEvent = async (req, res) => {
   }
 };
 
+//add participant in a event
+const addEventParticipant = async (req, res) => {
+  //check event exist
+  const eventId = req.params.id;
+  const [event] = await findById(eventId);
+  if (!event) {
+    return res.status(404).json({ message: "Error occured: No event found" });
+  }
+
+  //check if participant id is correct
+  const participantId = req.body.participantId;
+  const participantResult = await findParticipantById(participantId);
+  if (participantResult.length === 0) {
+    return res
+      .status(404)
+      .json({ message: "Error occured:Participant not found" });
+  }
+
+  //check if participant is already exist in event
+  const eventParticipantResult = await checkParticipantExist(
+    eventId,
+    participantId
+  );
+  if (eventParticipantResult.length > 0) {
+    return res
+      .status(400)
+      .json({ message: "Participant is already associated with the event" });
+  }
+
+  try {
+    //add participant in event
+    const addResult = await addParticipantInEvent(eventId, participantId);
+    return res.status(201).json({
+      message: "Participant added to event successfully",
+      result: addResult,
+    });
+  } catch (error) {
+    console.log(error.message || "Error occured: Failed to create event");
+    return res.status(500).json({
+      message: "Error occured",
+      error: error.message || "Failed to create event",
+    });
+  }
+};
+//remove participant from event
+const removeEventParticipant = async (req, res) => {
+  const eventId = req.params.id;
+  const [event] = await findById(eventId);
+  if (!event) {
+    return res.status(404).json({ message: "Error occured: No event found" });
+  }
+
+  //check if participant id is correct
+  const participantId = req.params.participantId;
+  const participantResult = await findParticipantById(participantId);
+  if (participantResult.length === 0) {
+    return res
+      .status(404)
+      .json({ message: "Error occured:Participant not found" });
+  }
+
+  //check if participant is already exist in event
+  const eventParticipantResult = await checkParticipantExist(
+    eventId,
+    participantId
+  );
+  if (eventParticipantResult.length > 0) {
+    try {
+      const result = await removeParticipantFromEvent(eventId, participantId);
+      return res.status(200).json({ message: "Participant removed" });
+    } catch (error) {
+      console.log(error.message || "Error occured: Failed remove participant");
+      return res.status(500).json({
+        message: "Error occured",
+        error: error.message || "Failed to remove participant",
+      });
+    }
+  } else {
+    return res
+      .status(400)
+      .json({ message: "Participant doesn't exist, no need to delete" });
+  }
+};
+
 module.exports = {
   createEvent,
   getEvents,
   getSingleEvent,
   deleteEvent,
   updateEvent,
+  addEventParticipant,
+  removeEventParticipant,
 };
