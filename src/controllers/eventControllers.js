@@ -59,7 +59,12 @@ const getEvents = async (req, res) => {
         return { ...event, participants };
       })
     );
-    return res.status(200).json(eventsWithParticipants);
+
+    const formattedResults = eventsWithParticipants.map((event) => ({
+      ...event,
+      date: new Date(event.date).toISOString().split("T")[0], // Formats date to YYYY-MM-DD
+    }));
+    return res.status(200).json(formattedResults);
     return res.status(200).json(events);
   } catch (error) {
     console.log("Error occurred while fetching events");
